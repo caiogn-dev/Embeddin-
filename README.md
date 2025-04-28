@@ -29,7 +29,7 @@ Insight PDF Explorer allows users to upload PDF files, view document lists, sear
 
 1. **Clone the Repository**:
    ```bash
-   git clone [repository-url](https://github.com/caiogn-dev/insight-pdf-explore.git)
+   git clone https://github.com/caiogn-dev/insight-pdf-explore.git
    cd insight-pdf-explorer
    ```
 
