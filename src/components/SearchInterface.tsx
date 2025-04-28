@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -22,6 +21,7 @@ const SearchInterface = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [synthesizedResponse, setSynthesizedResponse] = useState<string>("");
   const [isSearching, setIsSearching] = useState(false);
 
   const searchMutation = useMutation({
@@ -29,64 +29,42 @@ const SearchInterface = () => {
       setIsSearching(true);
       // Simulate a search request to the API
       try {
-        // In a real app, this would be a fetch to your Django API
-        // const response = await fetch(
-        //   `${import.meta.env.VITE_DJANGO_API_URL}/search/`,
-        //   {
-        //     method: "POST",
-        //     headers: {
-        //       "Content-Type": "application/json",
-        //     },
-        //     body: JSON.stringify({ query }),
-        //   }
-        // );
-        // if (!response.ok) throw new Error("Search failed");
-        // return await response.json();
-        
-        // For this demo, we'll simulate the search results
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Mock search results
-        return {
-          results: [
-            {
-              document_id: 1,
-              document_name: "Sample Document 1.pdf",
-              chunk_id: 3,
-              content: "This is a sample chunk of content that matches the search query. The content includes relevant information about " + query,
-              similarity: 0.89,
-            },
-            {
-              document_id: 1,
-              document_name: "Sample Document 1.pdf",
-              chunk_id: 7,
-              content: "Another matching chunk with slightly less relevance to " + query,
-              similarity: 0.76,
-            },
-            {
-              document_id: 2,
-              document_name: "Research Paper.pdf",
-              chunk_id: 12,
-              content: "This research paper discusses various aspects related to " + query + " and provides empirical evidence.",
-              similarity: 0.72,
-            },
-            {
-              document_id: 3,
-              document_name: "Technical Documentation.pdf",
-              chunk_id: 5,
-              content: "The technical specifications include references to " + query + " with implementation details.",
-              similarity: 0.65,
-            },
-          ],
-        };
+        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
+        const response = await fetch(`${baseUrl}/search/`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query }),
+        });
+        if (!response.ok) throw new Error(`Search failed with status ${response.status}`);
+        const data = await response.json();
+        console.log("Search API response:", data);
+        return data;
       } catch (error) {
+        console.error("Search error:", error);
         throw new Error("Failed to perform search");
       } finally {
         setIsSearching(false);
       }
     },
     onSuccess: (data) => {
-      setSearchResults(data.results);
+      if (data && data.results && Array.isArray(data.results)) {
+        setSearchResults(data.results);
+      } else {
+        console.warn("Unexpected API response format:", data);
+        setSearchResults([]);
+        toast({
+          title: "Warning",
+          description: "Received unexpected data format from server",
+          variant: "destructive",
+        });
+      }
+      if (data && data.synthesized_response) {
+        setSynthesizedResponse(data.synthesized_response);
+      } else {
+        setSynthesizedResponse("");
+      }
       if (!searchHistory.includes(searchTerm) && searchTerm.trim() !== "") {
         setSearchHistory((prev) => [searchTerm, ...prev.slice(0, 9)]);
       }
@@ -176,6 +154,12 @@ const SearchInterface = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {synthesizedResponse && (
+                <div className="mb-6 border rounded-lg p-4 bg-primary/5">
+                  <h3 className="font-medium text-lg mb-2">AI Summary</h3>
+                  <p className="text-sm">{synthesizedResponse}</p>
+                </div>
+              )}
               {searchResults.length > 0 ? (
                 <div className="space-y-6">
                   {searchResults.map((result, index) => (

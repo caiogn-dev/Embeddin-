@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload PDF</title>
+</head>
+<body>
+    <h1>Upload PDF</h1>
+    <form method="post" action="/api/documents/upload/" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label for="pdf_file">Select PDF:</label>
+        <input type="file" id="pdf_file" name="file" accept="application/pdf" required>
+        <button type="submit">Upload</button>
+    </form>
+</body>
+</html>

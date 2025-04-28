@@ -22,20 +22,25 @@ const Upload = ({ onUploadComplete }: UploadProps) => {
       const formData = new FormData();
       formData.append("file", file);
 
+      const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
       const response = await fetch(
-        `${import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002'}/upload/`,
+        `${baseUrl}/upload/`,
         {
           method: "POST",
           body: formData,
         }
       );
 
+      console.log("Upload API Response Status:", response.status);
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Upload API Error:", errorData);
         throw new Error(errorData.error || "Failed to upload file");
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log("Upload API Response Data:", data);
+      return data;
     },
     onSuccess: (data) => {
       toast({

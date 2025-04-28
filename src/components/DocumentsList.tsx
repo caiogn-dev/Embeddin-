@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +12,7 @@ interface Document {
   id: number;
   name: string;
   created_at: string;
-  chunks: number;
+  chunks: Array<{ id: number; content: string; embedding: any }>;
   tokens: number;
 }
 
@@ -31,13 +30,61 @@ const DocumentsList = () => {
   const { data: documents, isLoading, isError } = useQuery({
     queryKey: ["documents"],
     queryFn: async () => {
-      const response = await fetch(
-        `${import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002'}/list-documents/`
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch documents");
+      try {
+        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
+        // Set a timeout for the fetch request (30 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        
+        const response = await fetch(`${baseUrl}/list-documents/`, {
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        console.log("API Response Status:", response.status);
+        if (!response.ok) {
+          throw new Error("Failed to fetch documents");
+        }
+        const data = await response.json();
+        console.log("API Response Data:", data);
+        // Check if data is an array directly or wrapped in an object
+        if (Array.isArray(data)) {
+          return data;
+        } else if (data && Array.isArray(data.documents)) {
+          return data.documents;
+        } else {
+          console.warn("Unexpected API response format for documents:", data);
+          return [];
+        }
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+        // Retry once in case of network issues
+        if (error.name === 'AbortError') {
+          console.log("Request timed out, retrying once...");
+          try {
+            const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
+            const response = await fetch(`${baseUrl}/list-documents/`);
+            console.log("Retry API Response Status:", response.status);
+            if (!response.ok) {
+              throw new Error("Failed to fetch documents on retry");
+            }
+            const data = await response.json();
+            console.log("Retry API Response Data:", data);
+            if (Array.isArray(data)) {
+              return data;
+            } else if (data && Array.isArray(data.documents)) {
+              return data.documents;
+            } else {
+              console.warn("Unexpected API response format for documents on retry:", data);
+              return [];
+            }
+          } catch (retryError) {
+            console.error("Retry failed:", retryError);
+            throw retryError;
+          }
+        }
+        throw error;
       }
-      return response.json() as Promise<Document[]>;
     },
   });
 
@@ -62,7 +109,7 @@ const DocumentsList = () => {
             comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
             break;
           case "chunks":
-            comparison = a.chunks - b.chunks;
+            comparison = a.chunks.length - b.chunks.length;
             break;
           case "tokens":
             comparison = a.tokens - b.tokens;
@@ -101,7 +148,8 @@ const DocumentsList = () => {
     return (
       <div className="text-center py-10">
         <p className="text-lg text-red-500">Failed to load documents</p>
-        <p className="text-muted-foreground">Please try again later</p>
+        <p className="text-muted-foreground">Please check your network connection or server status and try again later.</p>
+        <p className="text-xs text-muted-foreground mt-2">Error details can be found in the browser console.</p>
       </div>
     );
   }
@@ -204,7 +252,7 @@ const DocumentsList = () => {
                         <TableCell>
                           {new Date(document.created_at).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-center">{document.chunks}</TableCell>
+                        <TableCell className="text-center">{document.chunks.length}</TableCell>
                         <TableCell className="text-center">{document.tokens}</TableCell>
                         <TableCell className="text-right space-x-1">
                           <Button
@@ -280,7 +328,7 @@ const DocumentsList = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Number of Chunks</h3>
-                  <p>{selectedDocument.chunks}</p>
+                  <p>{selectedDocument.chunks.length}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Total Tokens</h3>
@@ -295,7 +343,7 @@ const DocumentsList = () => {
                     <span className="font-medium">Processing Pipeline:</span>
                     <ul className="list-disc list-inside mt-1 space-y-1">
                       <li>PDF converted to Markdown</li>
-                      <li>Text chunked into {selectedDocument.chunks} sections</li>
+                      <li>Text chunked into {selectedDocument.chunks.length} sections</li>
                       <li>{selectedDocument.tokens} tokens processed</li>
                       <li>Embeddings generated and stored</li>
                     </ul>

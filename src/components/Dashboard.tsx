@@ -32,9 +32,8 @@ const Dashboard = () => {
   const { data: documents, isLoading } = useQuery({
     queryKey: ["documents"],
     queryFn: async () => {
-      const response = await fetch(
-        `${import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002'}/list-documents/`
-      );
+      const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
+      const response = await fetch(`${baseUrl}/list-documents/`);
       if (!response.ok) {
         throw new Error("Failed to fetch documents");
       }
@@ -44,7 +43,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (documents) {
-      const totalChunks = documents.reduce((acc, doc) => acc + doc.chunks, 0);
+      const totalChunks = documents.reduce((acc, doc) => acc + (Array.isArray(doc.chunks) ? doc.chunks.length : 0), 0);
       const totalTokens = documents.reduce((acc, doc) => acc + doc.tokens, 0);
       
       setStats({
