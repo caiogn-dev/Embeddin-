@@ -1,73 +1,61 @@
-# Welcome to your Lovable project
+# Insight PDF Explorer
 
-## Project info
+Welcome to **Insight PDF Explorer**, a tool designed to help you explore, upload, and manage PDF documents with ease. This project combines a robust backend built with Django and a dynamic frontend developed with React and TypeScript.
 
-**URL**: https://lovable.dev/projects/bc49e032-1c96-43b1-96dd-2f4c09bee18b
+## Overview
 
-## How can I edit this code?
+Insight PDF Explorer allows users to upload PDF files, view document lists, search through content, and gain insights from their documents through a user-friendly dashboard.
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+- **Document Upload**: Easily upload PDF files for processing.
+- **Document Listing**: View all uploaded documents in an organized list.
+- **Search Interface**: Search through document contents efficiently.
+- **Dashboard**: Get insights and analytics on your document collection.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/bc49e032-1c96-43b1-96dd-2f4c09bee18b) and start prompting.
+## Project Structure
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Backend**: Built with Django, handling API requests, document processing, and integration with language models for content analysis.
+- **Frontend**: Developed with React and TypeScript, providing a responsive and interactive user interface.
 
-**Use your preferred IDE**
+## Getting Started
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Prerequisites
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- Python 3.x for the backend
+- Node.js and npm for the frontend
 
-Follow these steps:
+### Installation
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. **Clone the Repository**:
+   ```bash
+   git clone <repository-url>
+   cd insight-pdf-explorer
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. **Backend Setup**:
+   ```bash
+   cd src/beckend
+   pip install -r requirements.txt
+   python manage.py runserver
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. **Frontend Setup**:
+   ```bash
+   cd src
+   npm install
+   npm start
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+### Usage
 
-**Edit a file directly in GitHub**
+- Access the application via `http://localhost:3000` for the frontend.
+- The backend API is available at `http://localhost:8000/api/`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Contributing
 
-**Use GitHub Codespaces**
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## License
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/bc49e032-1c96-43b1-96dd-2f4c09bee18b) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+This project is licensed under the MIT License - see the LICENSE file for details.
