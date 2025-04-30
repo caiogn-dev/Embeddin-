@@ -1,10 +1,10 @@
-# Embbedin-
+# Embeddin-
 
-Bem-vindo ao **Embbedin-**, uma ferramenta projetada para ajudá-lo a explorar, fazer upload e gerenciar documentos PDF com facilidade. Este projeto combina um backend robusto construído com Django e um frontend dinâmico desenvolvido com React e TypeScript.
+Bem-vindo ao **Embeddin-**, uma ferramenta projetada para ajudá-lo a explorar, fazer upload e gerenciar documentos PDF com facilidade. Este projeto combina um backend robusto construído com Django e um frontend dinâmico desenvolvido com React e TypeScript.
 
 ## Visão Geral
 
-O Embbedin- permite que os usuários façam upload de arquivos PDF, visualizem listas de documentos, pesquisem conteúdo e obtenham insights sobre seus documentos por meio de um painel de controle amigável.
+O Embeddin- permite que os usuários façam upload de arquivos PDF, visualizem listas de documentos, pesquisem conteúdo e obtenham insights sobre seus documentos por meio de um painel de controle amigável.
 
 ## Funcionalidades
 
