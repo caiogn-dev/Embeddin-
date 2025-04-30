@@ -1,27 +1,24 @@
 from django.contrib import admin
-from .models import Document, Chunk
+from .models import Document, DocumentChunk
 
-# Registra o modelo Document no Django Admin
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'created_at')  # Campos exibidos na lista
-    search_fields = ('name', 'content')  # Campos para busca
-    list_filter = ('created_at',)  # Filtros laterais
+    list_display = ['id', 'full_text_preview', 'created_at', 'updated_at']
+    list_filter = ['created_at', 'updated_at']
+    search_fields = ['markdown']
+    date_hierarchy = 'created_at'
 
-# Registra o modelo Chunk no Django Admin
-@admin.register(Chunk)
-class ChunkAdmin(admin.ModelAdmin):
-    list_display = ('id', 'document', 'display_embedding', 'created_at')  # Campos exibidos na lista
-    search_fields = ('content',)  # Campos para busca
-    list_filter = ('created_at',)  # Filtros laterais
-    
-    def display_embedding(self, obj):
-        """Custom display for embedding field to avoid ValueError."""
-        embedding = getattr(obj, 'embedding', None)
-        if embedding is not None:
-            try:
-                return f"Vector ({len(embedding)} dimensions)"
-            except Exception:
-                return "Vector (unknown dimensions)"
-        return "No embedding"
-    display_embedding.short_description = 'Embedding'
+    def full_text_preview(self, obj):
+        return obj.markdown[:100] + "..." if len(obj.markdown) > 100 else obj.markdown
+    full_text_preview.short_description = 'Full Text'
+
+@admin.register(DocumentChunk)
+class DocumentChunkAdmin(admin.ModelAdmin):
+    list_display = ['id', 'document', 'chunk_index', 'chunk_text_preview']
+    list_filter = ['document__created_at', 'chunk_index']  # Use related field
+    search_fields = ['chunk_text']
+    list_select_related = ['document']  # Optimize queries
+
+    def chunk_text_preview(self, obj):
+        return obj.chunk_text[:100] + "..." if len(obj.chunk_text) > 100 else obj.chunk_text
+    chunk_text_preview.short_description = 'Chunk Text'

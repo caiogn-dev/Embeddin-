@@ -18,7 +18,7 @@ const Index = () => {
     queryFn: async () => {
       try {
         // Just a simple check to see if the API is reachable
-        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
+        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8000';
         const response = await fetch(`${baseUrl}/list-documents/`, {
           method: "GET",
         });

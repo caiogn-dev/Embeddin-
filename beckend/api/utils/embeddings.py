@@ -13,7 +13,12 @@ def generate_embedding(text):
         return response.json()["embedding"]
     except requests.RequestException as e:
         raise RuntimeError(f"Failed to generate embedding: {e}")
+def count_tokens(text):
+    """Estimate tokens by counting words."""
+    words = re.split(r'\s+', text.strip())
+    return len(words)
 
+    
 def cosine_similarity(a: List[float], b: List[float]) -> float:
     a = np.array(a)
     b = np.array(b)

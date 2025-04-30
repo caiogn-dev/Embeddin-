@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
+from dotenv import load_dotenv
+import os
+import sys
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -19,8 +21,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-p=3*y^e@%@8z8935w_utn1z#qgptdh7^#u(te-jfb1x_+o-0#x'
+SECRET_KEY = load_dotenv('.env')
+if not SECRET_KEY:
+    print("Error: SECRET_KEY not found in .env file.")
+    sys.exit(1)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -134,12 +138,11 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
-    "http://127.0.0.1:5173",
     "http://localhost:8080",
 ]
 
 OLLAMA_API_URL = "http://localhost:11434"
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8002']
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', "http://localhost:8080"]
 
 
 REST_FRAMEWORK = {

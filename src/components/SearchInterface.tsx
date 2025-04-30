@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
@@ -17,20 +17,105 @@ interface SearchResult {
   similarity: number;
 }
 
+// Function to format response text with enhanced Markdown support
+const formatResponseText = (text: string): React.ReactNode => {
+  let displayText = text;
+  try {
+    const fixedJson = text.replace(/'/g, '"');
+    const parsed = JSON.parse(fixedJson);
+    if (parsed && typeof parsed === 'object' && 'result' in parsed) {
+      displayText = parsed.result;
+    }
+  } catch (e) {
+    console.warn('Failed to parse fixed JSON:', e);
+  }
+  // Processar displayText para formatação Markdown
+  const blocks = displayText.split('\n\n');
+  const htmlBlocks = blocks.map(block => {
+    const trimmed = block.trim();
+    if (trimmed.startsWith('### ')) {
+      return `<h3>${trimmed.substring(4)}</h3>`;
+    } else if (trimmed.startsWith('#### ')) {
+      return `<h4>${trimmed.substring(5)}</h4>`;
+    } else if (/^\s*- /.test(trimmed)) {
+      const lines = block.split('\n');
+      const listItems = lines
+        .map(line => {
+          const match = line.match(/^\s*- (.+)$/);
+          return match ? `<li>${match[1]}</li>` : line;
+        })
+        .filter(item => item.startsWith('<li>'));
+      return `<ul>${listItems.join('')}</ul>`;
+    } else {
+      let paragraph = trimmed;
+      paragraph = paragraph.replace(/`([^`]+)`/g, '<code>$1</code>');
+      paragraph = paragraph.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      paragraph = paragraph.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      paragraph = paragraph.replace(/\n\n/g, '<br /><br />');
+      return `<p>${paragraph}</p>`;
+    }
+  });
+  const htmlContent = htmlBlocks.join('');
+  return (
+    <div
+      style={{
+        fontFamily: 'Arial, sans-serif',
+        lineHeight: '1.6',
+        maxWidth: '800px',
+        margin: '0 auto',
+        padding: '20px',
+        color: '#333',
+      }}
+      dangerouslySetInnerHTML={{ __html: htmlContent }}
+    />
+  );
+};
+// Utility to parse JSON safely
+const tryParseJson = (str: string): { result?: string; query?: string } | null => {
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    return null;
+  }
+};
+
 const SearchInterface = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [synthesizedResponse, setSynthesizedResponse] = useState<string>("");
+  const [synthesizedResponse, setSynthesizedResponse] = useState<string | { result: string }>("");
+  const [displayedText, setDisplayedText] = useState<string>("");
   const [isSearching, setIsSearching] = useState(false);
+
+  // Apply typewriter effect when synthesizedResponse changes
+  const responseText = typeof synthesizedResponse === 'string'
+    ? synthesizedResponse
+    : (synthesizedResponse && typeof synthesizedResponse === 'object' && 'result' in synthesizedResponse
+      ? synthesizedResponse.result
+      : JSON.stringify(synthesizedResponse));
+  useEffect(() => {
+    if (!responseText) {
+      setDisplayedText("");
+      return;
+    }
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index < responseText.length) {
+        setDisplayedText(responseText.slice(0, index + 1));
+        index++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 20);
+    return () => clearInterval(interval);
+  }, [responseText]);
 
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
       setIsSearching(true);
-      // Simulate a search request to the API
       try {
-        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
-        const response = await fetch(`${baseUrl}/search/`, {
+        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8000';
+        const response = await fetch(`${baseUrl}/rag_search/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -39,11 +124,11 @@ const SearchInterface = () => {
         });
         if (!response.ok) throw new Error(`Search failed with status ${response.status}`);
         const data = await response.json();
-        console.log("Search API response:", data);
+        console.log("RAG API response:", data);
         return data;
       } catch (error) {
-        console.error("Search error:", error);
-        throw new Error("Failed to perform search");
+        console.error("RAG search error:", error);
+        throw new Error("Failed to perform RAG search");
       } finally {
         setIsSearching(false);
       }
@@ -62,8 +147,10 @@ const SearchInterface = () => {
       }
       if (data && data.synthesized_response) {
         setSynthesizedResponse(data.synthesized_response);
+        setDisplayedText(""); // Reset displayed text
       } else {
         setSynthesizedResponse("");
+        setDisplayedText("");
       }
       if (!searchHistory.includes(searchTerm) && searchTerm.trim() !== "") {
         setSearchHistory((prev) => [searchTerm, ...prev.slice(0, 9)]);
@@ -90,6 +177,45 @@ const SearchInterface = () => {
 
   return (
     <div className="space-y-6">
+      <style>
+        {`
+          .formatted-text h3 {
+            color: #2c3e50;
+            margin-top: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+          }
+          .formatted-text h4 {
+            color: #34495e;
+            margin-top: 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+          }
+          .formatted-text ul {
+            list-style-type: disc;
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+          }
+          .formatted-text li {
+            margin-bottom: 0.25rem;
+          }
+          .formatted-text p {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+          }
+          .formatted-text strong {
+            font-weight: 700;
+          }
+          .formatted-text em {
+            font-style: italic;
+          }
+          .formatted-text {
+            color: #333;
+            font-size: 0.9rem;
+          }
+        `}
+      </style>
+
       <Card>
         <CardHeader>
           <CardTitle>Semantic Search</CardTitle>
@@ -130,7 +256,7 @@ const SearchInterface = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>How it works</AlertTitle>
               <AlertDescription>
-                Your query is converted to an embedding vector using Ollama and compared against document chunks in the database using vector similarity search.
+                Your query is processed by an AI model to generate a summary based on relevant document chunks retrieved via semantic search.
               </AlertDescription>
             </Alert>
           </div>
@@ -142,7 +268,7 @@ const SearchInterface = () => {
           <TabsTrigger value="results">Search Results</TabsTrigger>
           <TabsTrigger value="history">Search History</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="results">
           <Card>
             <CardHeader>
@@ -157,7 +283,20 @@ const SearchInterface = () => {
               {synthesizedResponse && (
                 <div className="mb-6 border rounded-lg p-4 bg-primary/5">
                   <h3 className="font-medium text-lg mb-2">AI Summary</h3>
-                  <p className="text-sm">{synthesizedResponse}</p>
+                  <div className="space-y-2">
+                    {/* User's Query - Right Aligned */}
+                    <div className="flex justify-end">
+                      <div className="max-w-xs bg-blue-100 p-2 rounded-lg text-sm">
+                        <strong>You:</strong> {searchTerm || 'User Query'}
+                      </div>
+                    </div>
+                    {/* AI Response - Left Aligned */}
+                    <div className="flex justify-start">
+                      <div className="max-w-prose bg-gray-100 p-2 rounded-lg text-sm whitespace-pre-wrap">
+                        <strong>AI:</strong> {formatResponseText(displayedText)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
               {searchResults.length > 0 ? (
@@ -194,7 +333,7 @@ const SearchInterface = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="history">
           <Card>
             <CardHeader>
