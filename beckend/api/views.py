@@ -2,6 +2,7 @@ from django.shortcuts import render
 import logging
 import asyncio
 from django.db.models import Sum, Count
+from django.db import transaction
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 import requests
@@ -211,15 +212,18 @@ class AgentListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = AgentSerializer(data=request.data)
+        data = request.data.copy()
+        try:
+            data["embedding"] = generate_embedding(data["prompt"])
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        serializer = AgentSerializer(data=data)
         if serializer.is_valid():
-            agent = serializer.save()
             try:
-                embedding = generate_embedding(agent.prompt)
-                agent.embedding = embedding
-                agent.save()
+                with transaction.atomic():
+                    agent = serializer.save()
             except Exception as e:
-                agent.delete()
                 return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return Response(AgentSerializer(agent).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
