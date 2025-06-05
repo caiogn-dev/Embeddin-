@@ -7,6 +7,7 @@ import Dashboard from "@/components/Dashboard";
 import DocumentsList from "@/components/DocumentsList";
 import SearchInterface from "@/components/SearchInterface";
 import Upload from "@/components/Upload";
+import AgentForm from "@/components/AgentForm";
 import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
@@ -64,11 +65,12 @@ const Index = () => {
       </div>
 
       <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-4 mb-8">
+        <TabsList className="grid grid-cols-5 mb-8">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="upload">Upload</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="search">Search</TabsTrigger>
+          <TabsTrigger value="agents">Agents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
@@ -85,6 +87,10 @@ const Index = () => {
 
         <TabsContent value="search">
           <SearchInterface />
+        </TabsContent>
+
+        <TabsContent value="agents">
+          <AgentForm />
         </TabsContent>
       </Tabs>
     </div>
