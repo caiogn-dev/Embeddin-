@@ -38,9 +38,15 @@ const Index = () => {
 
   useEffect(() => {
     if (isError || (apiStatus && !apiStatus.connected)) {
+      const errorMsg =
+        (apiStatus && apiStatus.error?.message) ||
+        (typeof apiStatus?.error === "string" && apiStatus.error) ||
+        "Could not connect to the backend API. Please ensure the Django server is running.";
+
       toast({
+        id: "api-connection-issue",
         title: "API Connection Issue",
-        description: "Could not connect to the backend API. Please ensure the Django server is running.",
+        description: errorMsg,
         variant: "destructive",
       });
     }

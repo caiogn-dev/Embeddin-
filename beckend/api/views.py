@@ -80,11 +80,17 @@ class DocumentUploadView(APIView):
             try:
                 markdown = request.data['markdown']
                 chunks = chunk_text(markdown, chunk_size=500, overlap=50)
+                logger.info(f"Chunks gerados: {len(chunks)}")
                 token_count = sum(len(chunk.split()) for chunk in chunks)
 
                 # Generate and save embeddings for each chunk
                 for index, chunk in enumerate(chunks):
+                    logger.info(f"Chunk {index} tamanho: {len(chunk)}")
                     embedding = generate_embedding(chunk)
+                    if not embedding or len(embedding) != 768:
+                        logger.error(f"Embedding inválido para chunk {index}: {embedding}")
+                        raise ValueError(f"Embedding inválido para chunk {index}")
+                    logger.info(f"Embedding {index} primeiros valores: {embedding[:5]}")
                     DocumentChunk.objects.create(
                         document=document,
                         chunk_text=chunk,

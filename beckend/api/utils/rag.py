@@ -1,4 +1,5 @@
-# beckend/api/utils/rag.py
+import os
+from openai import OpenAI
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
@@ -8,52 +9,36 @@ from langchain.chains import RetrievalQA
 import requests
 from typing import List, Optional
 
-class XAIChat(BaseChatModel):
-    xai_api_key: str
-    model: str
-    base_url: str
+# Inicializa o client X.AI (OpenAI compatible)
+client = OpenAI(
+    api_key=os.environ.get("XAI_API_KEY"),
+    base_url="https://api.x.ai/v1",
+)
 
-    def __init__(self, xai_api_key: str, model: str = "grok-beta", base_url: str = "https://api.x.ai/v1"):
-        super().__init__(xai_api_key=xai_api_key, model=model, base_url=base_url)
-        self.xai_api_key = xai_api_key
+class XAIChat(BaseChatModel):
+    model: str
+
+    def __init__(self, model: str = "grok-3"):
+        super().__init__(model=model)
         self.model = model
-        self.base_url = base_url
 
     def _generate(self, messages: List[HumanMessage | AIMessage], stop: Optional[List[str]] = None) -> ChatResult:
-        """
-        Gera uma resposta a partir de uma lista de mensagens (estilo chat).
-        Utiliza a API da X.AI para obter a resposta do modelo.
-
-        Parâmetros:
-            messages (List[HumanMessage | AIMessage]): Lista de mensagens trocadas no chat.
-            stop (Optional[List[str]]): Tokens de parada, se aplicável (não utilizado neste caso).
-
-        Retorna:
-            ChatResult: Objeto contendo a resposta gerada pelo modelo.
-        """
-        headers = {
-            "Authorization": f"Bearer {self.xai_api_key}",
-            "Content-Type": "application/json",
-        }
-
-        payload = {
-            "model": self.model,
-            "messages": [
-                {
-                    "role": "user" if isinstance(msg, HumanMessage) else "assistant",
-                    "content": msg.content
-                }
-                for msg in messages
-            ],
-        }
-
-        response = requests.post(f"{self.base_url}/chat/completions", json=payload, headers=headers)
-        response.raise_for_status()
-        result = response.json()
-
-        message = AIMessage(content=result["choices"][0]["message"]["content"])
+        # Converte mensagens para o formato esperado pelo client
+        api_messages = [
+            {"role": "user" if isinstance(msg, HumanMessage) else "assistant", "content": msg.content}
+            for msg in messages
+        ]
+        # Exemplo: pode adicionar uma mensagem system se desejar
+        # api_messages.insert(0, {"role": "system", "content": "You are a PhD-level mathematician."})
+        response = client.chat.completions.create(
+            model=self.model,
+            messages=api_messages,
+        )
+        content = response.choices[0].message.content
+        message = AIMessage(content=content)
         generation = ChatGeneration(message=message)
         return ChatResult(generations=[generation])
+
     @property
     def _llm_type(self) -> str:
         return "xai-chat"
@@ -78,7 +63,7 @@ class CustomRetriever(BaseRetriever):
 
 # Initialize LLM and QA chain
 llm = XAIChat(
-    xai_api_key="xai-KpZZyU6MIarnkWHwteAirawTVHo2PyLp65MJrQVVQGlW3AvXPqcrnPabMc4zoi1pUDi21DCg3jnggntL"
+    model="grok-3"
 )
 retriever = CustomRetriever()
 qa_chain = RetrievalQA.from_chain_type(

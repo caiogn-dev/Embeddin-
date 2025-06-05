@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { AlertCircle, Search, FileText } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface SearchResult {
   document_id: number;
@@ -17,66 +19,34 @@ interface SearchResult {
   similarity: number;
 }
 
-// Function to format response text with enhanced Markdown support
-const formatResponseText = (text: string): React.ReactNode => {
-  let displayText = text;
-  try {
-    const fixedJson = text.replace(/'/g, '"');
-    const parsed = JSON.parse(fixedJson);
-    if (parsed && typeof parsed === 'object' && 'result' in parsed) {
-      displayText = parsed.result;
+// Utility to robustly extract the LLM answer
+const extractLLMResult = (response: any): string => {
+  if (!response) return "";
+  if (typeof response === "string") {
+    // Tenta JSON.parse normal
+    try {
+      const parsed = JSON.parse(response);
+      if (parsed && typeof parsed === "object" && "result" in parsed) {
+        return parsed.result;
+      }
+    } catch {
+      // Tenta trocar aspas simples por duplas e parsear de novo
+      try {
+        const fixed = response.replace(/'/g, '"');
+        const parsed = JSON.parse(fixed);
+        if (parsed && typeof parsed === "object" && "result" in parsed) {
+          return parsed.result;
+        }
+      } catch {
+        // Não é JSON, retorna só o texto puro
+        return response;
+      }
     }
-  } catch (e) {
-    console.warn('Failed to parse fixed JSON:', e);
   }
-  // Processar displayText para formatação Markdown
-  const blocks = displayText.split('\n\n');
-  const htmlBlocks = blocks.map(block => {
-    const trimmed = block.trim();
-    if (trimmed.startsWith('### ')) {
-      return `<h3>${trimmed.substring(4)}</h3>`;
-    } else if (trimmed.startsWith('#### ')) {
-      return `<h4>${trimmed.substring(5)}</h4>`;
-    } else if (/^\s*- /.test(trimmed)) {
-      const lines = block.split('\n');
-      const listItems = lines
-        .map(line => {
-          const match = line.match(/^\s*- (.+)$/);
-          return match ? `<li>${match[1]}</li>` : line;
-        })
-        .filter(item => item.startsWith('<li>'));
-      return `<ul>${listItems.join('')}</ul>`;
-    } else {
-      let paragraph = trimmed;
-      paragraph = paragraph.replace(/`([^`]+)`/g, '<code>$1</code>');
-      paragraph = paragraph.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      paragraph = paragraph.replace(/\*(.*?)\*/g, '<em>$1</em>');
-      paragraph = paragraph.replace(/\n\n/g, '<br /><br />');
-      return `<p>${paragraph}</p>`;
-    }
-  });
-  const htmlContent = htmlBlocks.join('');
-  return (
-    <div
-      style={{
-        fontFamily: 'Arial, sans-serif',
-        lineHeight: '1.6',
-        maxWidth: '800px',
-        margin: '0 auto',
-        padding: '20px',
-        color: '#333',
-      }}
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
-    />
-  );
-};
-// Utility to parse JSON safely
-const tryParseJson = (str: string): { result?: string; query?: string } | null => {
-  try {
-    return JSON.parse(str);
-  } catch (e) {
-    return null;
+  if (typeof response === "object" && response !== null && "result" in response) {
+    return response.result;
   }
+  return String(response);
 };
 
 const SearchInterface = () => {
@@ -88,11 +58,7 @@ const SearchInterface = () => {
   const [isSearching, setIsSearching] = useState(false);
 
   // Apply typewriter effect when synthesizedResponse changes
-  const responseText = typeof synthesizedResponse === 'string'
-    ? synthesizedResponse
-    : (synthesizedResponse && typeof synthesizedResponse === 'object' && 'result' in synthesizedResponse
-      ? synthesizedResponse.result
-      : JSON.stringify(synthesizedResponse));
+  const responseText = extractLLMResult(synthesizedResponse);
   useEffect(() => {
     if (!responseText) {
       setDisplayedText("");
@@ -174,6 +140,15 @@ const SearchInterface = () => {
     setSearchTerm(item);
     searchMutation.mutate(item);
   };
+
+  // Preprocess displayedText para garantir linha em branco antes de listas numeradas e quebras de linha funcionais
+  const processedMarkdown = displayedText
+    // Garante linha em branco antes de listas numeradas (mas não duplica se já houver)
+    .replace(/([^\n])\n(\d+\.)/g, '$1\n\n$2')
+    // Força <br> para linhas soltas que não são listas nem parágrafos
+    .replace(/([^\n])\n([^\n\d])/g, '$1  \n$2')
+    // Normaliza quebras de linha do Windows
+    .replace(/\r\n/g, '\n');
 
   return (
     <div className="space-y-6">
@@ -290,10 +265,11 @@ const SearchInterface = () => {
                         <strong>You:</strong> {searchTerm || 'User Query'}
                       </div>
                     </div>
-                    {/* AI Response - Left Aligned */}
+                    {/* AI Response - Left Aligned, com markdown elegante */}
                     <div className="flex justify-start">
-                      <div className="max-w-prose bg-gray-100 p-2 rounded-lg text-sm whitespace-pre-wrap">
-                        <strong>AI:</strong> {formatResponseText(displayedText)}
+                      <div className="prose prose-sm max-w-prose bg-gray-100 p-4 rounded-lg shadow text-sm">
+                        <strong>AI:</strong>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} breaks={true}>{processedMarkdown}</ReactMarkdown>
                       </div>
                     </div>
                   </div>

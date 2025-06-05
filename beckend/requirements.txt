@@ -1,0 +1,11 @@
+django
+djangorestframework
+psycopg2-binary
+langchain
+pydantic
+requests
+PyPDF2
+openai
+numpy
+scikit-learn
+dotenv

@@ -90,8 +90,8 @@ DATABASES = {
         'NAME': 'rag_db',  # Replace with your PostgreSQL database name
         'USER': 'postgres',  # Replace with your PostgreSQL username
         'PASSWORD': 'password',  # Replace with your PostgreSQL password
-        'HOST': 'localhost',          # Replace with your database host (e.g., '127.0.0.1' or a remote host)
-        'PORT': '5432',               # Default PostgreSQL port
+        'HOST': '127.0.0.1',          # Replace with your database host (e.g., '127.0.0.1' or a remote host)
+        'PORT': '32768',               # Default PostgreSQL port
     }
 }
 

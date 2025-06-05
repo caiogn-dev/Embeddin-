@@ -111,19 +111,6 @@ const DocumentsList = () => {
     },
   });
 
-  const { data: chunks, isLoading: isLoadingChunks } = useQuery<Chunk[]>({
-    queryKey: ["documentChunks", selectedDocument?.id],
-    queryFn: async () => {
-      if (!selectedDocument) return [];
-      const baseUrl = import.meta.env.VITE_DJANGO_API_URL || "http://127.0.0.1:8000";
-      const url = `${baseUrl}/documents/${selectedDocument.id}/chunks/`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch chunks");
-      return response.json();
-    },
-    enabled: !!selectedDocument,
-  });
-
   const handleSort = (field: SortField) => {
     if (field === sortField) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -383,23 +370,23 @@ const DocumentsList = () => {
                 <p className="text-sm text-muted-foreground">{selectedDocument.markdown.substring(0, 200)}...</p>
               </div>
 
-              {isLoadingChunks ? (
-                <p>Loading chunks...</p>
-              ) : (
-                <div>
-                  <h3 className="font-semibold mb-2">Chunk Previews</h3>
-                  <div className="bg-secondary p-4 rounded-md text-sm max-h-64 overflow-y-auto">
-                    {chunks?.map((chunk) => (
+              <div>
+                <h3 className="font-semibold mb-2">Chunk Previews</h3>
+                <div className="bg-secondary p-4 rounded-md text-sm max-h-64 overflow-y-auto">
+                  {selectedDocument.chunks.length > 0 ? (
+                    selectedDocument.chunks.map((chunk) => (
                       <div key={chunk.id} className="mb-2">
                         <span className="font-medium">Chunk {chunk.chunk_index} (ID: {chunk.id}):</span>
                         <p className="mt-1 text-muted-foreground">
                           {chunk.chunk_text.substring(0, 100)}...
                         </p>
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground italic">No chunks</span>
+                  )}
                 </div>
-              )}
+              </div>
 
               <div className="flex justify-end">
                 <Button variant="outline" onClick={() => setSelectedDocument(null)}>
