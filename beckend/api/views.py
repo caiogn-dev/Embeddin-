@@ -10,8 +10,8 @@ from .utils.embeddings import generate_embedding
 from rest_framework.views import APIView, View
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import DocumentSerializer
-from .models import Document, DocumentChunk
+from .serializers import DocumentSerializer, AgentSerializer
+from .models import Document, DocumentChunk, Agent
 from .utils.chunking import chunk_text
 from .utils.embeddings import generate_embedding
 from django.utils.decorators import method_decorator
@@ -202,3 +202,24 @@ class SearchAPIView(APIView):
         except Exception as e:
             logger.error(f"Search error: {str(e)}")
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AgentListCreateView(APIView):
+    def get(self, request):
+        agents = Agent.objects.all()
+        serializer = AgentSerializer(agents, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = AgentSerializer(data=request.data)
+        if serializer.is_valid():
+            agent = serializer.save()
+            try:
+                embedding = generate_embedding(agent.prompt)
+                agent.embedding = embedding
+                agent.save()
+            except Exception as e:
+                agent.delete()
+                return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(AgentSerializer(agent).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -22,3 +22,18 @@ class DocumentChunk(models.Model):
 
     def __str__(self):
         return f"Chunk {self.chunk_index} of Document {self.document_id}"
+
+
+class Agent(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    prompt = models.TextField()
+    embedding = VectorField(dimensions=768)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.name
