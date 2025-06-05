@@ -31,7 +31,8 @@ O Embeddin- permite que os usuários façam upload de arquivos PDF, visualizem l
 
 1. **Clonar o Repositório**:
    ```bash
-   git clone <url-do-repositório>
+=======
+   git clone https://github.com/caiogn-dev/insight-pdf-explore.git
    cd insight-pdf-explorer
    ```
 
