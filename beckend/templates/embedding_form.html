@@ -13,5 +13,14 @@
         <input type="file" id="pdf_file" name="file" accept="application/pdf" required>
         <button type="submit">Upload</button>
     </form>
+
+    {% if llm_response %}
+    <div style="max-width: 700px; margin: 2rem auto; padding: 1.5rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px #0001; font-family: 'Segoe UI', Arial, sans-serif;">
+        <h2 style="margin-bottom: 1rem; font-size: 1.2rem; color: #2d3748;">Resposta do LLM</h2>
+        <div style="white-space: pre-line; line-height: 1.7; color: #222; font-size: 1.05rem;">
+            {{ llm_response|linebreaksbr }}
+        </div>
+    </div>
+    {% endif %}
 </body>
 </html>

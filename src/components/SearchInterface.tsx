@@ -1,13 +1,15 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { AlertCircle, Search, FileText } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface SearchResult {
   document_id: number;
@@ -17,20 +19,69 @@ interface SearchResult {
   similarity: number;
 }
 
+// Utility to robustly extract the LLM answer
+const extractLLMResult = (response: any): string => {
+  if (!response) return "";
+  if (typeof response === "string") {
+    // Tenta JSON.parse normal
+    try {
+      const parsed = JSON.parse(response);
+      if (parsed && typeof parsed === "object" && "result" in parsed) {
+        return parsed.result;
+      }
+    } catch {
+      // Tenta trocar aspas simples por duplas e parsear de novo
+      try {
+        const fixed = response.replace(/'/g, '"');
+        const parsed = JSON.parse(fixed);
+        if (parsed && typeof parsed === "object" && "result" in parsed) {
+          return parsed.result;
+        }
+      } catch {
+        // Não é JSON, retorna só o texto puro
+        return response;
+      }
+    }
+  }
+  if (typeof response === "object" && response !== null && "result" in response) {
+    return response.result;
+  }
+  return String(response);
+};
+
 const SearchInterface = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [synthesizedResponse, setSynthesizedResponse] = useState<string>("");
+  const [synthesizedResponse, setSynthesizedResponse] = useState<string | { result: string }>("");
+  const [displayedText, setDisplayedText] = useState<string>("");
   const [isSearching, setIsSearching] = useState(false);
+
+  // Apply typewriter effect when synthesizedResponse changes
+  const responseText = extractLLMResult(synthesizedResponse);
+  useEffect(() => {
+    if (!responseText) {
+      setDisplayedText("");
+      return;
+    }
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index < responseText.length) {
+        setDisplayedText(responseText.slice(0, index + 1));
+        index++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 20);
+    return () => clearInterval(interval);
+  }, [responseText]);
 
   const searchMutation = useMutation({
     mutationFn: async (query: string) => {
       setIsSearching(true);
-      // Simulate a search request to the API
       try {
-        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
-        const response = await fetch(`${baseUrl}/search/`, {
+        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8000';
+        const response = await fetch(`${baseUrl}/rag_search/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -39,11 +90,11 @@ const SearchInterface = () => {
         });
         if (!response.ok) throw new Error(`Search failed with status ${response.status}`);
         const data = await response.json();
-        console.log("Search API response:", data);
+        console.log("RAG API response:", data);
         return data;
       } catch (error) {
-        console.error("Search error:", error);
-        throw new Error("Failed to perform search");
+        console.error("RAG search error:", error);
+        throw new Error("Failed to perform RAG search");
       } finally {
         setIsSearching(false);
       }
@@ -62,8 +113,10 @@ const SearchInterface = () => {
       }
       if (data && data.synthesized_response) {
         setSynthesizedResponse(data.synthesized_response);
+        setDisplayedText(""); // Reset displayed text
       } else {
         setSynthesizedResponse("");
+        setDisplayedText("");
       }
       if (!searchHistory.includes(searchTerm) && searchTerm.trim() !== "") {
         setSearchHistory((prev) => [searchTerm, ...prev.slice(0, 9)]);
@@ -88,8 +141,56 @@ const SearchInterface = () => {
     searchMutation.mutate(item);
   };
 
+  // Preprocess displayedText para garantir linha em branco antes de listas numeradas e quebras de linha funcionais
+  const processedMarkdown = displayedText
+    // Garante linha em branco antes de listas numeradas (mas não duplica se já houver)
+    .replace(/([^\n])\n(\d+\.)/g, '$1\n\n$2')
+    // Força <br> para linhas soltas que não são listas nem parágrafos
+    .replace(/([^\n])\n([^\n\d])/g, '$1  \n$2')
+    // Normaliza quebras de linha do Windows
+    .replace(/\r\n/g, '\n');
+
   return (
     <div className="space-y-6">
+      <style>
+        {`
+          .formatted-text h3 {
+            color: #2c3e50;
+            margin-top: 1.5rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+          }
+          .formatted-text h4 {
+            color: #34495e;
+            margin-top: 1rem;
+            font-size: 1rem;
+            font-weight: 500;
+          }
+          .formatted-text ul {
+            list-style-type: disc;
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+          }
+          .formatted-text li {
+            margin-bottom: 0.25rem;
+          }
+          .formatted-text p {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+          }
+          .formatted-text strong {
+            font-weight: 700;
+          }
+          .formatted-text em {
+            font-style: italic;
+          }
+          .formatted-text {
+            color: #333;
+            font-size: 0.9rem;
+          }
+        `}
+      </style>
+
       <Card>
         <CardHeader>
           <CardTitle>Semantic Search</CardTitle>
@@ -130,7 +231,7 @@ const SearchInterface = () => {
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>How it works</AlertTitle>
               <AlertDescription>
-                Your query is converted to an embedding vector using Ollama and compared against document chunks in the database using vector similarity search.
+                Your query is processed by an AI model to generate a summary based on relevant document chunks retrieved via semantic search.
               </AlertDescription>
             </Alert>
           </div>
@@ -142,7 +243,7 @@ const SearchInterface = () => {
           <TabsTrigger value="results">Search Results</TabsTrigger>
           <TabsTrigger value="history">Search History</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="results">
           <Card>
             <CardHeader>
@@ -157,7 +258,21 @@ const SearchInterface = () => {
               {synthesizedResponse && (
                 <div className="mb-6 border rounded-lg p-4 bg-primary/5">
                   <h3 className="font-medium text-lg mb-2">AI Summary</h3>
-                  <p className="text-sm">{synthesizedResponse}</p>
+                  <div className="space-y-2">
+                    {/* User's Query - Right Aligned */}
+                    <div className="flex justify-end">
+                      <div className="max-w-xs bg-blue-100 p-2 rounded-lg text-sm">
+                        <strong>You:</strong> {searchTerm || 'User Query'}
+                      </div>
+                    </div>
+                    {/* AI Response - Left Aligned, com markdown elegante */}
+                    <div className="flex justify-start">
+                      <div className="prose prose-sm max-w-prose bg-gray-100 p-4 rounded-lg shadow text-sm">
+                        <strong>AI:</strong>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} breaks={true}>{processedMarkdown}</ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
               {searchResults.length > 0 ? (
@@ -194,7 +309,7 @@ const SearchInterface = () => {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="history">
           <Card>
             <CardHeader>

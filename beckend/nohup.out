@@ -1,0 +1,45 @@
+Watching for file changes with StatReloader
+Not Found: /
+[22/May/2025 19:44:48] "GET / HTTP/1.1" 404 2315
+[22/May/2025 19:46:06] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 19:46:06] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 19:46:16] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 19:46:20] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 19:46:24] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 19:46:24] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 19:46:28] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 20:27:43] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 20:28:06] "OPTIONS /api/documents/list-documents/ HTTP/1.1" 200 0
+[22/May/2025 20:28:06] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[22/May/2025 20:28:19] "OPTIONS /api/documents/rag_search/ HTTP/1.1" 200 0
+[22/May/2025 20:28:24] "POST /api/documents/search/ HTTP/1.1" 200 44218
+[22/May/2025 20:28:35] "POST /api/documents/search/ HTTP/1.1" 200 43395
+[22/May/2025 20:28:35] "POST /api/documents/rag_search/ HTTP/1.1" 200 44102
+Watching for file changes with StatReloader
+Not Found: /
+[05/Jun/2025 04:12:08] "GET / HTTP/1.1" 404 2315
+Not Found: /favicon.ico
+[05/Jun/2025 04:12:08] "GET /favicon.ico HTTP/1.1" 404 2366
+Not Found: /api/documents
+[05/Jun/2025 04:12:21] "GET /api/documents HTTP/1.1" 404 2372
+Not Found: /api/documents/
+[05/Jun/2025 04:12:27] "GET /api/documents/ HTTP/1.1" 404 3318
+[05/Jun/2025 04:12:39] "GET /api/documents/list-documents/ HTTP/1.1" 200 219687
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/css/bootstrap-tweaks.css HTTP/1.1" 200 3426
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/css/prettify.css HTTP/1.1" 200 817
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/css/default.css HTTP/1.1" 200 1152
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/css/bootstrap.min.css HTTP/1.1" 200 121457
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/js/jquery-3.7.1.min.js HTTP/1.1" 200 87533
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/js/ajax-form.js HTTP/1.1" 200 3796
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/js/csrf.js HTTP/1.1" 200 1793
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/js/bootstrap.min.js HTTP/1.1" 200 39680
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/js/default.js HTTP/1.1" 200 1268
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/js/prettify-min.js HTTP/1.1" 200 13632
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/js/load-ajax-form.js HTTP/1.1" 200 59
+[05/Jun/2025 04:12:39] "GET /static/rest_framework/img/grid.png HTTP/1.1" 200 1458
+[05/Jun/2025 04:15:27] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[05/Jun/2025 04:15:27] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[05/Jun/2025 04:15:31] "OPTIONS /api/documents/list-documents/ HTTP/1.1" 200 0
+[05/Jun/2025 04:15:31] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[05/Jun/2025 04:15:33] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022
+[05/Jun/2025 04:15:39] "GET /api/documents/list-documents/ HTTP/1.1" 200 200022

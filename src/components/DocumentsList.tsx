@@ -5,19 +5,37 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Search, Trash, ArrowUp, ArrowDown } from "lucide-react";
+import { FileText, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+// Types
+interface Chunk {
+  id: number;
+  chunk_text: string;
+  chunk_index: number;
+}
 
 interface Document {
   id: number;
-  name: string;
+  markdown: string;
   created_at: string;
-  chunks: Array<{ id: number; content: string; embedding: any }>;
-  tokens: number;
+  updated_at: string;
+  chunks: Chunk[];
+  token_count: number;
 }
 
-type SortField = "name" | "created_at" | "chunks" | "tokens";
+type SortField = "name" | "created_at" | "chunk_count" | "token_count";
 type SortDirection = "asc" | "desc";
+
+// Função para derivar um nome a partir do markdown
+const deriveDocumentName = (markdown: string): string => {
+  const maxLength = 50;
+  const cleanText = markdown.replace(/(\r\n|\n|\r)/gm, " ").trim();
+  return cleanText.length > maxLength
+    ? `${cleanText.substring(0, maxLength)}...`
+    : cleanText || "Untitled Document";
+};
 
 const DocumentsList = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -27,42 +45,47 @@ const DocumentsList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const { data: documents, isLoading, isError } = useQuery({
+  const { data: documents, isLoading, isError, error } = useQuery<Document[]>({
     queryKey: ["documents"],
     queryFn: async () => {
       try {
-        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
-        // Set a timeout for the fetch request (30 seconds)
+        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || "http://127.0.0.1:8000";
+        const url = `${baseUrl}/list-documents/`;
+        console.log("Fetching documents from:", url);
+
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
-        
-        const response = await fetch(`${baseUrl}/list-documents/`, {
-          signal: controller.signal
+
+        const response = await fetch(url, {
+          signal: controller.signal,
+          headers: { "Content-Type": "application/json" },
         });
         clearTimeout(timeoutId);
-        
+
         console.log("API Response Status:", response.status);
         if (!response.ok) {
-          throw new Error("Failed to fetch documents");
+          const errorText = await response.text();
+          console.error("API Error Response:", errorText);
+          throw new Error(`Failed to fetch documents: ${response.status} ${errorText}`);
         }
+
         const data = await response.json();
         console.log("API Response Data:", data);
-        // Check if data is an array directly or wrapped in an object
+
         if (Array.isArray(data)) {
           return data;
         } else if (data && Array.isArray(data.documents)) {
           return data.documents;
         } else {
-          console.warn("Unexpected API response format for documents:", data);
+          console.warn("Unexpected API response format:", data);
           return [];
         }
       } catch (error) {
         console.error("Error fetching documents:", error);
-        // Retry once in case of network issues
-        if (error.name === 'AbortError') {
+        if (error.name === "AbortError") {
           console.log("Request timed out, retrying once...");
           try {
-            const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
+            const baseUrl = import.meta.env.VITE_DJANGO_API_URL || "http://127.0.0.1:8000";
             const response = await fetch(`${baseUrl}/list-documents/`);
             console.log("Retry API Response Status:", response.status);
             if (!response.ok) {
@@ -75,7 +98,7 @@ const DocumentsList = () => {
             } else if (data && Array.isArray(data.documents)) {
               return data.documents;
             } else {
-              console.warn("Unexpected API response format for documents on retry:", data);
+              console.warn("Unexpected API response format on retry:", data);
               return [];
             }
           } catch (retryError) {
@@ -100,28 +123,26 @@ const DocumentsList = () => {
   const sortedDocuments = documents
     ? [...documents].sort((a, b) => {
         let comparison = 0;
-        
         switch (sortField) {
           case "name":
-            comparison = a.name.localeCompare(b.name);
+            comparison = deriveDocumentName(a.markdown).localeCompare(deriveDocumentName(b.markdown));
             break;
           case "created_at":
             comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
             break;
-          case "chunks":
+          case "chunk_count":
             comparison = a.chunks.length - b.chunks.length;
             break;
-          case "tokens":
-            comparison = a.tokens - b.tokens;
+          case "token_count":
+            comparison = a.token_count - b.token_count;
             break;
         }
-        
         return sortDirection === "asc" ? comparison : -comparison;
       })
     : [];
 
   const filteredDocuments = sortedDocuments.filter((doc) =>
-    doc.name.toLowerCase().includes(searchTerm.toLowerCase())
+    deriveDocumentName(doc.markdown).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
@@ -146,11 +167,20 @@ const DocumentsList = () => {
 
   if (isError) {
     return (
-      <div className="text-center py-10">
-        <p className="text-lg text-red-500">Failed to load documents</p>
-        <p className="text-muted-foreground">Please check your network connection or server status and try again later.</p>
-        <p className="text-xs text-muted-foreground mt-2">Error details can be found in the browser console.</p>
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <Alert variant="destructive">
+            <AlertTitle>Failed to Load Documents</AlertTitle>
+            <AlertDescription>
+              {error?.message || "An error occurred while fetching documents."}
+              <br />
+              Please check your network connection or server status and try again later.
+              <br />
+              <span className="text-xs">Error details can be found in the browser console.</span>
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -185,11 +215,11 @@ const DocumentsList = () => {
                     <TableRow>
                       <TableHead className="w-[50px]">ID</TableHead>
                       <TableHead>
-                        <div 
+                        <div
                           className="flex items-center cursor-pointer"
                           onClick={() => handleSort("name")}
                         >
-                          Name
+                          Document
                           {sortField === "name" && (
                             sortDirection === "asc" ? 
                               <ArrowUp className="ml-1 h-4 w-4" /> : 
@@ -198,7 +228,7 @@ const DocumentsList = () => {
                         </div>
                       </TableHead>
                       <TableHead>
-                        <div 
+                        <div
                           className="flex items-center cursor-pointer"
                           onClick={() => handleSort("created_at")}
                         >
@@ -211,12 +241,12 @@ const DocumentsList = () => {
                         </div>
                       </TableHead>
                       <TableHead className="text-center">
-                        <div 
+                        <div
                           className="flex items-center justify-center cursor-pointer"
-                          onClick={() => handleSort("chunks")}
+                          onClick={() => handleSort("chunk_count")}
                         >
                           Chunks
-                          {sortField === "chunks" && (
+                          {sortField === "chunk_count" && (
                             sortDirection === "asc" ? 
                               <ArrowUp className="ml-1 h-4 w-4" /> : 
                               <ArrowDown className="ml-1 h-4 w-4" />
@@ -224,12 +254,12 @@ const DocumentsList = () => {
                         </div>
                       </TableHead>
                       <TableHead className="text-center">
-                        <div 
+                        <div
                           className="flex items-center justify-center cursor-pointer"
-                          onClick={() => handleSort("tokens")}
+                          onClick={() => handleSort("token_count")}
                         >
                           Tokens
-                          {sortField === "tokens" && (
+                          {sortField === "token_count" && (
                             sortDirection === "asc" ? 
                               <ArrowUp className="ml-1 h-4 w-4" /> : 
                               <ArrowDown className="ml-1 h-4 w-4" />
@@ -246,14 +276,14 @@ const DocumentsList = () => {
                         <TableCell>
                           <div className="flex items-center">
                             <FileText className="h-4 w-4 mr-2 text-blue-500" />
-                            <span>{document.name}</span>
+                            <span>{deriveDocumentName(document.markdown)}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           {new Date(document.created_at).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-center">{document.chunks.length}</TableCell>
-                        <TableCell className="text-center">{document.tokens}</TableCell>
+                        <TableCell className="text-center">{document.token_count}</TableCell>
                         <TableCell className="text-right space-x-1">
                           <Button
                             variant="ghost"
@@ -269,7 +299,6 @@ const DocumentsList = () => {
                 </Table>
               </div>
 
-              {/* Pagination */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center space-x-2 mt-4">
                   <Button
@@ -320,7 +349,7 @@ const DocumentsList = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="font-semibold mb-1">Document Name</h3>
-                  <p>{selectedDocument.name}</p>
+                  <p>{deriveDocumentName(selectedDocument.markdown)}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Created At</h3>
@@ -332,22 +361,30 @@ const DocumentsList = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Total Tokens</h3>
-                  <p>{selectedDocument.tokens}</p>
+                  <p>{selectedDocument.token_count}</p>
                 </div>
               </div>
 
               <div>
-                <h3 className="font-semibold mb-2">Processing Information</h3>
-                <div className="bg-secondary p-4 rounded-md text-sm">
-                  <div className="mb-2">
-                    <span className="font-medium">Processing Pipeline:</span>
-                    <ul className="list-disc list-inside mt-1 space-y-1">
-                      <li>PDF converted to Markdown</li>
-                      <li>Text chunked into {selectedDocument.chunks.length} sections</li>
-                      <li>{selectedDocument.tokens} tokens processed</li>
-                      <li>Embeddings generated and stored</li>
-                    </ul>
-                  </div>
+                <h3 className="font-semibold mb-1">Content Preview</h3>
+                <p className="text-sm text-muted-foreground">{selectedDocument.markdown.substring(0, 200)}...</p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Chunk Previews</h3>
+                <div className="bg-secondary p-4 rounded-md text-sm max-h-64 overflow-y-auto">
+                  {selectedDocument.chunks.length > 0 ? (
+                    selectedDocument.chunks.map((chunk) => (
+                      <div key={chunk.id} className="mb-2">
+                        <span className="font-medium">Chunk {chunk.chunk_index} (ID: {chunk.id}):</span>
+                        <p className="mt-1 text-muted-foreground">
+                          {chunk.chunk_text.substring(0, 100)}...
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground italic">No chunks</span>
+                  )}
                 </div>
               </div>
 

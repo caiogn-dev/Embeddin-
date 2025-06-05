@@ -7,6 +7,7 @@ import Dashboard from "@/components/Dashboard";
 import DocumentsList from "@/components/DocumentsList";
 import SearchInterface from "@/components/SearchInterface";
 import Upload from "@/components/Upload";
+import AgentForm from "@/components/AgentForm";
 import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
@@ -18,7 +19,7 @@ const Index = () => {
     queryFn: async () => {
       try {
         // Just a simple check to see if the API is reachable
-        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
+        const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8000';
         const response = await fetch(`${baseUrl}/list-documents/`, {
           method: "GET",
         });
@@ -38,9 +39,15 @@ const Index = () => {
 
   useEffect(() => {
     if (isError || (apiStatus && !apiStatus.connected)) {
+      const errorMsg =
+        (apiStatus && apiStatus.error?.message) ||
+        (typeof apiStatus?.error === "string" && apiStatus.error) ||
+        "Could not connect to the backend API. Please ensure the Django server is running.";
+
       toast({
+        id: "api-connection-issue",
         title: "API Connection Issue",
-        description: "Could not connect to the backend API. Please ensure the Django server is running.",
+        description: errorMsg,
         variant: "destructive",
       });
     }
@@ -58,11 +65,12 @@ const Index = () => {
       </div>
 
       <Tabs defaultValue="dashboard" value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-4 mb-8">
+        <TabsList className="grid grid-cols-5 mb-8">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="upload">Upload</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="search">Search</TabsTrigger>
+          <TabsTrigger value="agents">Agents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard">
@@ -79,6 +87,10 @@ const Index = () => {
 
         <TabsContent value="search">
           <SearchInterface />
+        </TabsContent>
+
+        <TabsContent value="agents">
+          <AgentForm />
         </TabsContent>
       </Tabs>
     </div>

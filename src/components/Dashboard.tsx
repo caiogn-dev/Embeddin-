@@ -1,9 +1,8 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, FileText, Search } from "lucide-react";
+import { FileText, Search } from "lucide-react";
 
 // Types
 interface DashboardStats {
@@ -13,13 +12,29 @@ interface DashboardStats {
   recentDocuments: Document[];
 }
 
+interface Chunk {
+  id: number;
+  chunk_text: string;
+  chunk_index: number;
+}
+
 interface Document {
   id: number;
-  name: string;
+  markdown: string;
   created_at: string;
-  chunks: number;
-  tokens: number;
+  updated_at: string;
+  chunks: Chunk[];
+  token_count: number;
 }
+
+// Função para derivar um nome a partir do markdown
+const deriveDocumentName = (markdown: string): string => {
+  const maxLength = 50;
+  const cleanText = markdown.replace(/(\r\n|\n|\r)/gm, " ").trim();
+  return cleanText.length > maxLength
+    ? `${cleanText.substring(0, maxLength)}...`
+    : cleanText || "Untitled Document";
+};
 
 const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
@@ -32,7 +47,7 @@ const Dashboard = () => {
   const { data: documents, isLoading } = useQuery({
     queryKey: ["documents"],
     queryFn: async () => {
-      const baseUrl = import.meta.env.VITE_DJANGO_API_URL || 'http://127.0.0.1:8002';
+      const baseUrl = import.meta.env.VITE_DJANGO_API_URL || "http://127.0.0.1:8000";
       const response = await fetch(`${baseUrl}/list-documents/`);
       if (!response.ok) {
         throw new Error("Failed to fetch documents");
@@ -43,16 +58,20 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (documents) {
-      const totalChunks = documents.reduce((acc, doc) => acc + (Array.isArray(doc.chunks) ? doc.chunks.length : 0), 0);
-      const totalTokens = documents.reduce((acc, doc) => acc + doc.tokens, 0);
-      
+      const totalChunks = documents.reduce((acc, doc) => acc + doc.chunks.length, 0);
+      const totalTokens = documents.reduce((acc, doc) => acc + doc.token_count, 0);
+
       setStats({
         totalDocuments: documents.length,
         totalChunks,
         totalTokens,
-        recentDocuments: [...documents].sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        ).slice(0, 5),
+        recentDocuments: [...documents]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 5)
+          .map(doc => ({
+            ...doc,
+            name: deriveDocumentName(doc.markdown), // Adiciona o nome derivado
+          })),
       });
     }
   }, [documents]);
@@ -120,13 +139,18 @@ const Dashboard = () => {
           {stats.recentDocuments.length > 0 ? (
             <div className="space-y-2">
               {stats.recentDocuments.map((doc) => (
-                <div 
+                <div
                   key={doc.id}
                   className="flex items-center justify-between border-b pb-2"
                 >
                   <div className="flex items-center">
                     <FileText className="h-4 w-4 mr-2 text-blue-500" />
-                    <span className="font-medium">{doc.name}</span>
+                    <div>
+                      <span className="font-medium">{doc.name}</span>
+                      <p className="text-xs text-muted-foreground">
+                        {doc.chunks.length} chunks, {doc.token_count} tokens
+                      </p>
+                    </div>
                   </div>
                   <div className="text-sm text-muted-foreground">
                     {new Date(doc.created_at).toLocaleDateString()}
